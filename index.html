@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -20,7 +20,7 @@
             color: var(--text-main);
             transition: background-color 0.3s ease;
         }
-        h1, h2, h3 { margin: 0; }
+        h1, h2, h3, p { margin: 0; }
         .header {
             text-align: center;
             margin-bottom: 20px;
@@ -53,10 +53,7 @@
         .med-name { font-size: 17px; font-weight: 500; }
         .med-desc { font-size: 14px; color: var(--text-muted); }
         
-        /* Estilo Toggle iOS */
-        .toggle {
-            position: relative; display: inline-block; width: 50px; height: 30px;
-        }
+        .toggle { position: relative; display: inline-block; width: 50px; height: 30px; }
         .toggle input { opacity: 0; width: 0; height: 0; }
         .slider {
             position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
@@ -70,16 +67,25 @@
         input:checked + .slider { background-color: #34C759; }
         input:checked + .slider:before { transform: translateX(20px); }
         
-        .btn-advance {
-            background-color: var(--primary); color: white; border: none;
-            border-radius: 12px; padding: 16px; width: 100%; font-size: 17px; font-weight: 600;
-            cursor: pointer; display: none; margin-bottom: 30px;
+        .btn-advance, .btn-alarms {
+            border: none; border-radius: 12px; padding: 16px; width: 100%; font-size: 17px; font-weight: 600;
+            cursor: pointer; margin-bottom: 20px;
         }
-        .color-picker { display: flex; gap: 10px; margin-top: 10px; }
-        .color-btn {
-            width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;
+        .btn-advance { background-color: var(--primary); color: white; display: none; }
+        .btn-alarms { background-color: #FF2D55; color: white; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 100%;
+            height: 50px;
+            border-radius: 12px;
+            cursor: pointer;
+            padding: 0;
+            background: none;
         }
-        .color-btn.active { border-color: var(--text-main); }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);}
     </style>
 </head>
 <body>
@@ -96,6 +102,10 @@
         </div>
     </div>
 
+    <button class="btn-alarms" onclick="generarAlarmasIOS()">
+        🔔 Programar Avisos Automáticos (iOS)
+    </button>
+
     <div class="message-card">
         <div class="message-title">🤍 Mensaje de Juanma:</div>
         <div class="message-text" id="daily-message"></div>
@@ -109,14 +119,8 @@
 
     <div class="settings-card">
         <h3>Personalizar Fondo</h3>
-        <div class="color-picker">
-            <div class="color-btn" style="background-color: #F2F2F7;" onclick="changeColor('#F2F2F7', this)"></div>
-            <div class="color-btn" style="background-color: #FFE5E5;" onclick="changeColor('#FFE5E5', this)"></div>
-            <div class="color-btn" style="background-color: #E5F0FF;" onclick="changeColor('#E5F0FF', this)"></div>
-            <div class="color-btn" style="background-color: #E8F5E9;" onclick="changeColor('#E8F5E9', this)"></div>
-            <div class="color-btn" style="background-color: #FFF3E0;" onclick="changeColor('#FFF3E0', this)"></div>
-            <div class="color-btn" style="background-color: #F3E5F5;" onclick="changeColor('#F3E5F5', this)"></div>
-        </div>
+        <p style="font-size: 14px; color: var(--text-muted); margin-top: 4px; margin-bottom: 12px;">Toca el recuadro para elegir tu color favorito:</p>
+        <input type="color" id="bg-color-picker" value="#F2F2F7" onchange="changeColor(this.value)">
     </div>
 
     <script>
@@ -135,20 +139,20 @@
         ];
 
         const MEDS = [
-            { id: 'ayunas', title: 'Al despertar (Ayunas)', items: [
+            { id: 'ayunas', title: '07:00 - Al despertar (Ayunas)', items: [
                 { id: 'omeprazol', name: 'Omeprazol 40mg', desc: '1 cápsula' },
                 { id: 'yovis', name: 'Yovis', desc: '1 sobre' }
             ]},
-            { id: 'desayuno', title: 'Desayuno (1h después)', items: [
+            { id: 'desayuno', title: '09:00 - Desayuno', items: [
                 { id: 'pylera1', name: 'Pylera', desc: '3 cápsulas' }
             ]},
-            { id: 'comida', title: 'Comida', items: [
+            { id: 'comida', title: '14:00 - Comida', items: [
                 { id: 'pylera2', name: 'Pylera', desc: '3 cápsulas' }
             ]},
-            { id: 'cena', title: 'Cena', items: [
+            { id: 'cena', title: '19:00 - Cena', items: [
                 { id: 'pylera3', name: 'Pylera', desc: '3 cápsulas' }
             ]},
-            { id: 'noche', title: 'Antes de dormir', items: [
+            { id: 'noche', title: '23:00 - Antes de dormir', items: [
                 { id: 'pylera4', name: 'Pylera', desc: '3 cápsulas' }
             ]}
         ];
@@ -166,6 +170,8 @@
 
         function renderApp() {
             document.body.style.backgroundColor = state.bgColor;
+            document.getElementById('bg-color-picker').value = state.bgColor;
+            
             document.getElementById('current-day').innerText = state.currentDay;
             document.getElementById('progress-fill').style.width = ((state.currentDay - 1) / TOTAL_DAYS * 100) + '%';
             
@@ -228,28 +234,65 @@
                 state.completedToday = {};
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
-                state.currentDay++; // Avanza a estado finalizado
+                state.currentDay++; 
             }
             saveState();
             renderApp();
         }
 
-        function changeColor(color, btnElement) {
+        function changeColor(color) {
             state.bgColor = color;
             document.body.style.backgroundColor = color;
-            
-            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-            btnElement.classList.add('active');
             saveState();
         }
 
-        // Inicializar color activo visualmente
-        window.onload = () => {
-            document.querySelectorAll('.color-btn').forEach(btn => {
-                if(btn.style.backgroundColor === state.bgColor) btn.classList.add('active');
+        // Generador de alertas nativas de iOS (Archivo ICS)
+        function generarAlarmasIOS() {
+            const ahora = new Date();
+            const yyyy = ahora.getFullYear();
+            const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+            const dd = String(ahora.getDate()).padStart(2, '0');
+            const fechaBase = `${yyyy}${mm}${dd}`;
+
+            const eventos = [
+                { hora: '070000', titulo: '💊 Omeprazol y Yovis (Ayunas)' },
+                { hora: '090000', titulo: '💊 Pylera 1 (Desayuno)' },
+                { hora: '140000', titulo: '💊 Pylera 2 (Comida)' },
+                { hora: '190000', titulo: '💊 Pylera 3 (Cena)' },
+                { hora: '230000', titulo: '💊 Pylera 4 (Noche)' }
+            ];
+
+            let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//MediTrack//ES\n";
+            
+            eventos.forEach((ev, i) => {
+                icsContent += "BEGIN:VEVENT\n";
+                icsContent += `UID:meditrack-${i}-${fechaBase}@juuanmaa\n`;
+                icsContent += `DTSTAMP:${fechaBase}T000000Z\n`;
+                // Usando TZID para la zona horaria local de España
+                icsContent += `DTSTART;TZID=Europe/Madrid:${fechaBase}T${ev.hora}\n`;
+                // Se repite diariamente durante 10 días
+                icsContent += "RRULE:FREQ=DAILY;COUNT=10\n";
+                icsContent += `SUMMARY:${ev.titulo}\n`;
+                // Alarma a la hora exacta
+                icsContent += "BEGIN:VALARM\nTRIGGER:-PT0M\nACTION:DISPLAY\nDESCRIPTION:Recordatorio de Medicación\nEND:VALARM\n";
+                icsContent += "END:VEVENT\n";
             });
+            
+            icsContent += "END:VCALENDAR";
+
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.setAttribute('download', 'medicacion.ics');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.onload = () => {
             renderApp();
         }
     </script>
 </body>
 </html>
+
