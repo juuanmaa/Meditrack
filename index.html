@@ -108,11 +108,11 @@
     </div>
 
     <button class="btn-alarms" onclick="generarAlarmasIOS()">
-        🔔 Pulsane para tener un recordatorio
+        🔔 Programar Avisos (iOS)
     </button>
 
     <div class="message-card">
-        <div class="message-title">🩶 Mensaje de Tu Boyfriend:</div>
+        <div class="message-title">🤍 Mensaje de Juanma:</div>
         <div class="message-text" id="daily-message"></div>
     </div>
 
@@ -205,4 +205,132 @@
                 let timeClass = "";
                 if (currentHour >= group.startHour && currentHour < group.endHour) {
                     timeClass = "active-time"; // Resaltar el que toca
-                } else if (currentHour >=
+                } else if (currentHour >= group.endHour) {
+                    timeClass = "past-time"; // Atenuar los ya pasados
+                }
+
+                let groupHtml = `<div class="med-group ${timeClass}"><h3>${group.title}</h3>`;
+                group.items.forEach(med => {
+                    const isChecked = state.completedToday[med.id] ? 'checked' : '';
+                    groupHtml += `
+                        <div class="med-item">
+                            <div class="med-info">
+                                <span class="med-name">${med.name}</span>
+                                <span class="med-desc">${med.desc}</span>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="${med.id}" ${isChecked} onchange="toggleMed('${med.id}', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    `;
+                });
+                groupHtml += `</div>`;
+                listEl.innerHTML += groupHtml;
+            });
+
+            checkDayCompletion();
+        }
+
+        function toggleMed(id, checked) {
+            state.completedToday[id] = checked;
+            // Vibración (Háptica) para Android/Navegadores compatibles
+            if (navigator.vibrate && checked) {
+                navigator.vibrate(50);
+            }
+            saveState();
+        }
+
+        function checkDayCompletion() {
+            const allIds = MEDS.flatMap(g => g.items.map(i => i.id));
+            const allCompleted = allIds.every(id => state.completedToday[id]);
+            const btn = document.getElementById('btn-advance');
+            
+            if (allCompleted && state.currentDay <= TOTAL_DAYS) {
+                btn.style.display = 'block';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        function confirmAdvance() {
+            // Protección contra toques accidentales
+            if(confirm("¿Seguro que ya te has tomado todas las pastillas de hoy? Vamos a por el siguiente día 💪")) {
+                // Lanzar lluvia de confeti
+                confetti({
+                    particleCount: 150,
+                    spread: 80,
+                    origin: { y: 0.6 },
+                    colors: ['#007AFF', '#34C759', '#FF2D55']
+                });
+                
+                // Esperar 1.5 segundos para disfrutar del confeti antes de avanzar
+                setTimeout(() => {
+                    if (state.currentDay < TOTAL_DAYS) {
+                        state.currentDay++;
+                        state.completedToday = {};
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        state.currentDay++; 
+                    }
+                    saveState();
+                    renderApp();
+                }, 1500);
+            }
+        }
+
+        function changeColor(color) {
+            state.bgColor = color;
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if(!prefersDark) {
+                document.body.style.backgroundColor = color;
+            }
+            saveState();
+        }
+
+        function generarAlarmasIOS() {
+            const ahora = new Date();
+            const yyyy = ahora.getFullYear();
+            const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+            const dd = String(ahora.getDate()).padStart(2, '0');
+            const fechaBase = `${yyyy}${mm}${dd}`;
+
+            const eventos = [
+                { hora: '070000', titulo: '💊 Omeprazol y Yovis (Ayunas)' },
+                { hora: '090000', titulo: '💊 Pylera 1 (Desayuno)' },
+                { hora: '140000', titulo: '💊 Pylera 2 (Comida)' },
+                { hora: '190000', titulo: '💊 Pylera 3 (Cena)' },
+                { hora: '230000', titulo: '💊 Pylera 4 (Noche)' }
+            ];
+
+            let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//MediTrack//ES\n";
+            eventos.forEach((ev, i) => {
+                icsContent += "BEGIN:VEVENT\n";
+                icsContent += `UID:meditrack-${i}-${fechaBase}@juuanmaa\n`;
+                icsContent += `DTSTAMP:${fechaBase}T000000Z\n`;
+                icsContent += `DTSTART;TZID=Europe/Madrid:${fechaBase}T${ev.hora}\n`;
+                icsContent += "RRULE:FREQ=DAILY;COUNT=10\n";
+                icsContent += `SUMMARY:${ev.titulo}\n`;
+                icsContent += "BEGIN:VALARM\nTRIGGER:-PT0M\nACTION:DISPLAY\nDESCRIPTION:Recordatorio de Medicación\nEND:VALARM\n";
+                icsContent += "END:VEVENT\n";
+            });
+            icsContent += "END:VCALENDAR";
+
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.setAttribute('download', 'medicacion.ics');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.onload = () => {
+            renderApp();
+            // Refrescar los resaltados de hora cada minuto por si la app se queda abierta
+            setInterval(renderApp, 60000);
+        }
+    </script>
+</body>
+</html>
+
