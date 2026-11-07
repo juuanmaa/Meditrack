@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MediTrack</title>
+    <style>
+        :root {
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --primary: #007AFF;
+            --text-main: #000000;
+            --text-muted: #8E8E93;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-main);
+            transition: background-color 0.3s ease;
+        }
+        h1, h2, h3 { margin: 0; }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-top: 20px;
+        }
+        .progress-card, .message-card, .med-group, .settings-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .progress-title { font-size: 18px; font-weight: 600; color: var(--primary); }
+        .progress-bar {
+            height: 10px; background-color: #E5E5EA; border-radius: 5px; margin-top: 10px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background-color: var(--primary); width: 0%; transition: width 0.5s ease;
+        }
+        .message-title { font-size: 14px; font-weight: bold; color: #FF2D55; margin-bottom: 8px;}
+        .message-text { font-size: 16px; font-style: italic; }
+        .med-group h3 { font-size: 16px; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;}
+        
+        .med-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 0; border-bottom: 1px solid #E5E5EA;
+        }
+        .med-item:last-child { border-bottom: none; }
+        .med-info { display: flex; flex-direction: column; }
+        .med-name { font-size: 17px; font-weight: 500; }
+        .med-desc { font-size: 14px; color: var(--text-muted); }
+        
+        /* Estilo Toggle iOS */
+        .toggle {
+            position: relative; display: inline-block; width: 50px; height: 30px;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #E5E5EA; transition: .4s; border-radius: 30px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 26px; width: 26px;
+            left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider { background-color: #34C759; }
+        input:checked + .slider:before { transform: translateX(20px); }
+        
+        .btn-advance {
+            background-color: var(--primary); color: white; border: none;
+            border-radius: 12px; padding: 16px; width: 100%; font-size: 17px; font-weight: 600;
+            cursor: pointer; display: none; margin-bottom: 30px;
+        }
+        .color-picker { display: flex; gap: 10px; margin-top: 10px; }
+        .color-btn {
+            width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;
+        }
+        .color-btn.active { border-color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Tu Tratamiento</h1>
+        <p style="color: var(--text-muted);">Helicobacter pylori</p>
+    </div>
+
+    <div class="progress-card">
+        <div class="progress-title">Día <span id="current-day">1</span> de 10</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="message-card">
+        <div class="message-title">🤍 Mensaje de Juanma:</div>
+        <div class="message-text" id="daily-message"></div>
+    </div>
+
+    <div id="med-list">
+        <!-- Generado por JS -->
+    </div>
+
+    <button id="btn-advance" class="btn-advance" onclick="advanceDay()">Completar Día y Avanzar</button>
+
+    <div class="settings-card">
+        <h3>Personalizar Fondo</h3>
+        <div class="color-picker">
+            <div class="color-btn" style="background-color: #F2F2F7;" onclick="changeColor('#F2F2F7', this)"></div>
+            <div class="color-btn" style="background-color: #FFE5E5;" onclick="changeColor('#FFE5E5', this)"></div>
+            <div class="color-btn" style="background-color: #E5F0FF;" onclick="changeColor('#E5F0FF', this)"></div>
+            <div class="color-btn" style="background-color: #E8F5E9;" onclick="changeColor('#E8F5E9', this)"></div>
+            <div class="color-btn" style="background-color: #FFF3E0;" onclick="changeColor('#FFF3E0', this)"></div>
+            <div class="color-btn" style="background-color: #F3E5F5;" onclick="changeColor('#F3E5F5', this)"></div>
+        </div>
+    </div>
+
+    <script>
+        const TOTAL_DAYS = 10;
+        const MESSAGES = [
+            "¡Primer día! Sé que es un rollo de pastillas, pero estoy contigo. A por el bicho ese.",
+            "Día dos. Ya queda un poquito menos. ¡Eres una campeona!",
+            "Tercer día superado. Acuérdate de beber mucha agua hoy.",
+            "Casi en la mitad del camino. Si te sientes pesada es normal, ¡mucho ánimo!",
+            "¡Ecuador del tratamiento! Mitad fuera. Lo estás haciendo genial.",
+            "Día seis. Cuesta, lo sé, pero piensa en lo bien que vas a estar cuando acabe.",
+            "¡Solo quedan 4 días! La recta final, tú puedes con esto y más.",
+            "Tres días y te libras de este menú de pastillas. Te quiero.",
+            "¡Penúltimo día! Mañana es el último empujón. Eres increíble.",
+            "¡ÚLTIMO DÍA! Por fin se acabó. Lo conseguiste, ¡estoy súper orgulloso de ti!"
+        ];
+
+        const MEDS = [
+            { id: 'ayunas', title: 'Al despertar (Ayunas)', items: [
+                { id: 'omeprazol', name: 'Omeprazol 40mg', desc: '1 cápsula' },
+                { id: 'yovis', name: 'Yovis', desc: '1 sobre' }
+            ]},
+            { id: 'desayuno', title: 'Desayuno (1h después)', items: [
+                { id: 'pylera1', name: 'Pylera', desc: '3 cápsulas' }
+            ]},
+            { id: 'comida', title: 'Comida', items: [
+                { id: 'pylera2', name: 'Pylera', desc: '3 cápsulas' }
+            ]},
+            { id: 'cena', title: 'Cena', items: [
+                { id: 'pylera3', name: 'Pylera', desc: '3 cápsulas' }
+            ]},
+            { id: 'noche', title: 'Antes de dormir', items: [
+                { id: 'pylera4', name: 'Pylera', desc: '3 cápsulas' }
+            ]}
+        ];
+
+        let state = JSON.parse(localStorage.getItem('meditrack_state')) || {
+            currentDay: 1,
+            completedToday: {},
+            bgColor: '#F2F2F7'
+        };
+
+        function saveState() {
+            localStorage.setItem('meditrack_state', JSON.stringify(state));
+            checkDayCompletion();
+        }
+
+        function renderApp() {
+            document.body.style.backgroundColor = state.bgColor;
+            document.getElementById('current-day').innerText = state.currentDay;
+            document.getElementById('progress-fill').style.width = ((state.currentDay - 1) / TOTAL_DAYS * 100) + '%';
+            
+            let msgIndex = Math.min(state.currentDay - 1, TOTAL_DAYS - 1);
+            document.getElementById('daily-message').innerText = MESSAGES[msgIndex];
+
+            const listEl = document.getElementById('med-list');
+            listEl.innerHTML = '';
+
+            if (state.currentDay > TOTAL_DAYS) {
+                listEl.innerHTML = '<div class="message-card" style="text-align:center;"><h2>¡Tratamiento Finalizado! 🎉</h2></div>';
+                document.getElementById('btn-advance').style.display = 'none';
+                return;
+            }
+
+            MEDS.forEach(group => {
+                let groupHtml = `<div class="med-group"><h3>${group.title}</h3>`;
+                group.items.forEach(med => {
+                    const isChecked = state.completedToday[med.id] ? 'checked' : '';
+                    groupHtml += `
+                        <div class="med-item">
+                            <div class="med-info">
+                                <span class="med-name">${med.name}</span>
+                                <span class="med-desc">${med.desc}</span>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="${med.id}" ${isChecked} onchange="toggleMed('${med.id}', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    `;
+                });
+                groupHtml += `</div>`;
+                listEl.innerHTML += groupHtml;
+            });
+
+            checkDayCompletion();
+        }
+
+        function toggleMed(id, checked) {
+            state.completedToday[id] = checked;
+            saveState();
+        }
+
+        function checkDayCompletion() {
+            const allIds = MEDS.flatMap(g => g.items.map(i => i.id));
+            const allCompleted = allIds.every(id => state.completedToday[id]);
+            
+            const btn = document.getElementById('btn-advance');
+            if (allCompleted && state.currentDay <= TOTAL_DAYS) {
+                btn.style.display = 'block';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        function advanceDay() {
+            if (state.currentDay < TOTAL_DAYS) {
+                state.currentDay++;
+                state.completedToday = {};
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                state.currentDay++; // Avanza a estado finalizado
+            }
+            saveState();
+            renderApp();
+        }
+
+        function changeColor(color, btnElement) {
+            state.bgColor = color;
+            document.body.style.backgroundColor = color;
+            
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            saveState();
+        }
+
+        // Inicializar color activo visualmente
+        window.onload = () => {
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                if(btn.style.backgroundColor === state.bgColor) btn.classList.add('active');
+            });
+            renderApp();
+        }
+    </script>
+</body>
+</html>
